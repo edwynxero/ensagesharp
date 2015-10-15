@@ -15,15 +15,17 @@ namespace VisibilityEnhanced
         private static readonly bool Visibility_Ally = true;
         private static readonly bool Visibility_Ward = true;
         private static readonly bool Visibility_Creep = true;
+        private static readonly bool Visibility_Runes = true;
         private static readonly bool Visibility_Mines = true;
         private static readonly bool Visibility_Roshan = true;
         private static readonly bool Visibility_Netural = true;
         private static readonly bool Visibility_Courier = true;
         private static readonly bool Visibility_Summons = true;
         private static readonly bool Visibility_Building = true;
-        
+
         private static readonly Dictionary<Unit, ParticleEffect> VisibleUnit = new Dictionary<Unit, ParticleEffect>();
-        
+        private static readonly Dictionary<Rune, ParticleEffect> VisibileRune = new Dictionary<Rune, ParticleEffect>();
+
         private static Hero _me;
 
         static void Main(string[] args)
@@ -60,6 +62,12 @@ namespace VisibilityEnhanced
                 var creeps = ObjectMgr.GetEntities<Creep>().Where(creep => creep.IsAlive && creep.IsSpawned && creep.Team == _me.Team).ToList();
                 foreach (var creep in creeps)
                     HandleEffect(creep, "items_fx/aura_shivas");
+            }
+            if (Visibility_Runes)
+            {
+                var runes = ObjectMgr.GetEntities<Rune>().Where(rune => rune.IsAlive).ToList();
+                foreach (var rune in runes)
+                    HandleEffect(rune, "items_fx/aura_shivas");
             }
             if (Visibility_Mines)
             {
@@ -131,7 +139,6 @@ namespace VisibilityEnhanced
         {
             if (unit == null) return;
             Vector2 screenPos;
-
             ParticleEffect effect;
 
             var enemyPos = unit.Position + new Vector3(0, 0, unit.HealthBarOffset);
@@ -146,6 +153,27 @@ namespace VisibilityEnhanced
                 if (!VisibleUnit.TryGetValue(unit, out effect)) return;
                 effect.Dispose();
                 VisibleUnit.Remove(unit);
+            }
+        }
+        private static void HandleEffect(Rune rune, string effectName)
+        {
+            if (rune == null) return;
+            Vector2 screenPos;
+
+            ParticleEffect effect;
+
+            var enemyPos = rune.Position;
+            if (Drawing.WorldToScreen(enemyPos, out screenPos) && rune.IsVisibleForTeam(_me.GetEnemyTeam()) && rune.IsAlive)
+            {
+                if (VisibileRune.TryGetValue(rune, out effect)) return;
+                effect = rune.AddParticleEffect("particles/" + effectName + ".vpcf");
+                VisibileRune.Add(rune, effect);
+            }
+            else
+            {
+                if (!VisibileRune.TryGetValue(rune, out effect)) return;
+                effect.Dispose();
+                VisibileRune.Remove(rune);
             }
         }
     }
