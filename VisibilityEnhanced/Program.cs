@@ -57,7 +57,7 @@ namespace VisibilityEnhanced
             }
             if (Visibility_Creep)
             {
-                var creeps = ObjectMgr.GetEntities<Creep>().Where(creep => creep.IsAlive && creep.Team == _me.Team).ToList();
+                var creeps = ObjectMgr.GetEntities<Creep>().Where(creep => creep.IsAlive && creep.IsSpawned && creep.Team == _me.Team).ToList();
                 foreach (var creep in creeps)
                     HandleEffect(creep, "items_fx/aura_shivas");
             }
@@ -135,7 +135,7 @@ namespace VisibilityEnhanced
             ParticleEffect effect;
 
             var enemyPos = unit.Position + new Vector3(0, 0, unit.HealthBarOffset);
-            if (!Drawing.WorldToScreen(enemyPos, out screenPos) && unit.IsVisibleToEnemies && unit.IsAlive)
+            if (Drawing.WorldToScreen(enemyPos, out screenPos) && unit.IsVisibleToEnemies && unit.IsAlive)
             {
                 if (VisibleUnit.TryGetValue(unit, out effect)) return;
                 effect = unit.AddParticleEffect("particles/" + effectName + ".vpcf");
