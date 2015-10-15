@@ -16,7 +16,7 @@ namespace AIO_KillStealer
         private static readonly Dictionary<Hero, Ability> HeroSpellDictionary = new Dictionary<Hero, Ability>();
         private static void Main()
         {
-            Game.OnWndProc += KillStealer_OnWndProc;
+            //Game.OnWndProc += KillStealer_OnWndProc;
             Game.OnUpdate += KillStealer_OnUpdate;
             Drawing.OnDraw += KillStealer_OnDraw;
         }
