@@ -224,7 +224,7 @@ namespace AIO_KillStealer
                     var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, me, piercesSpellImmunity);
 
                     if (me.ClassID == ClassID.CDOTA_Unit_Hero_Axe)
-                        damageDone = (float) normalDamage;
+                        damageDone = (float) spellDamage;
 
                     float damageNeeded;
 
