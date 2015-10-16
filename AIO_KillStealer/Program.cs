@@ -11,7 +11,7 @@ namespace AIO_KillStealer
 {
     internal class Program
     {
-        private static bool _killstealEnabled = true;
+        public static bool KillStealEnabled = true;
         private static readonly Dictionary<Hero, double> HeroDamageDictionary = new Dictionary<Hero, double>();
         private static readonly Dictionary<Hero, string> HeroSpellDictionary = new Dictionary<Hero, string>();
         private static void Main()
@@ -23,7 +23,7 @@ namespace AIO_KillStealer
 
         private static void KillStealer_OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !_killstealEnabled)
+            if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !KillStealEnabled)
                 return;
             Utils.Sleep(100, "AIO_KillStealer");
 
@@ -209,7 +209,8 @@ namespace AIO_KillStealer
 
                 var spellDamageType = ability.DamageType;
                 var spellRange = range ?? (ability.CastRange + 50);
-                var spellCastPoint = (float)(ability.GetCastPoint() + Game.Ping / 1000);
+                //var spellCastPoint = (float)((ability.GetCastPoint() + Game.Ping) / 1000);
+                const int spellCastPoint = 0;
 
                 var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
                 foreach (var enemy in enemies)
@@ -223,7 +224,7 @@ namespace AIO_KillStealer
                         spellDamage = normalDamage;
 
                     var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, me, piercesSpellImmunity);
-
+                    
                     if (me.ClassID == ClassID.CDOTA_Unit_Hero_Axe)
                         damageDone = (float)spellDamage;
 
@@ -231,7 +232,7 @@ namespace AIO_KillStealer
 
                     if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded))
                     {
-                        damageNeeded = enemy.Health - damageDone + (spellCastPoint * enemy.HealthRegeneration) + MorphMustDie(enemy, spellCastPoint);
+                        damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
                         HeroDamageDictionary.Add(enemy, damageNeeded);
                         HeroSpellDictionary.Add(enemy, ability.Name);
                     }
@@ -240,14 +241,13 @@ namespace AIO_KillStealer
                         HeroDamageDictionary.Remove(enemy);
                         HeroSpellDictionary.Remove(enemy);
 
-                        damageNeeded = enemy.Health - damageDone + (spellCastPoint * enemy.HealthRegeneration) + MorphMustDie(enemy, spellCastPoint);
+                        damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
 
                         HeroDamageDictionary.Add(enemy, damageNeeded);
                         HeroSpellDictionary.Add(enemy, ability.Name);
                     }
-                    Console.Write(damageNeeded + " ");
-
-                    if (!_killstealEnabled || me.IsChanneling()) continue;
+                    
+                    if (!KillStealEnabled || me.IsChanneling()) continue;
 
                     if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, ability, damageDone)) continue;
 
@@ -279,7 +279,8 @@ namespace AIO_KillStealer
             var spellDamage = damage[(int)blinkstrike.Level];
             var backstabDamage = (float)bs[backstab.Level] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
             var spellRange = blinkstrike.CastRange + 50;
-            var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
+            //var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
+            const int spellCastPoint = 0;
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
@@ -304,7 +305,7 @@ namespace AIO_KillStealer
                     HeroSpellDictionary.Add(enemy, blinkstrike.Name);
                 }
 
-                if (!_killstealEnabled || me.IsChanneling()) continue;
+                if (!KillStealEnabled || me.IsChanneling()) continue;
 
                 if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, blinkstrike, damageBlinkstrike + damageBackstab)) continue;
 
