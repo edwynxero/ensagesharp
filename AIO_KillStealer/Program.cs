@@ -12,8 +12,8 @@ namespace AIO_KillStealer
     internal class Program
     {
         private static bool _killstealEnabled = true;
-        private static readonly Dictionary<Hero, float> HeroDamageDictionary = new Dictionary<Hero, float>();
-        private static readonly Dictionary<Hero, Ability> HeroSpellDictionary = new Dictionary<Hero, Ability>();
+        private static readonly Dictionary<Hero, double> HeroDamageDictionary = new Dictionary<Hero, double>();
+        private static readonly Dictionary<Hero, string> HeroSpellDictionary = new Dictionary<Hero, string>();
         private static void Main()
         {
             //Game.OnWndProc += KillStealer_OnWndProc;
@@ -25,7 +25,7 @@ namespace AIO_KillStealer
         {
             if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !_killstealEnabled)
                 return;
-            Utils.Sleep(250, "AIO_KillStealer");
+            Utils.Sleep(100, "AIO_KillStealer");
 
             var me = ObjectMgr.LocalHero;
             if (me == null)
@@ -179,7 +179,7 @@ namespace AIO_KillStealer
                         Kill(me, me.Spellbook.Spell2, new double[] { 125, 200, 275, 350 }, 3, 2500);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tusk:
-                    var tuskDamage = (me.MinimumDamage + me.BonusDamage)*3.5;
+                    var tuskDamage = (me.MinimumDamage + me.BonusDamage) * 3.5;
                     Kill(me, me.Spellbook.Spell6, new[] { tuskDamage, tuskDamage, tuskDamage }, 1, 300, false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Undying:
@@ -198,71 +198,73 @@ namespace AIO_KillStealer
 
         private static void Kill(Hero me, Ability ability, IReadOnlyList<double> damage, uint spellTargetType, uint? range = null, bool lsblock = true, bool piercesSpellImmunity = false, bool smartKill = false, bool complexKill = false, IReadOnlyList<double> adamage = null)
         {
+            var spellLevel = ability.Level - 1;
             if (ability.Level > 0)
             {
                 double normalDamage;
                 if (adamage == null)
-                    normalDamage = damage[(int) ability.Level];
+                    normalDamage = damage[(int)spellLevel];
                 else
-                    normalDamage = me.AghanimState() ? damage[(int) ability.Level] : adamage[(int) ability.Level];
+                    normalDamage = me.AghanimState() ? adamage[(int)spellLevel] : damage[(int)spellLevel];
 
                 var spellDamageType = ability.DamageType;
                 var spellRange = range ?? (ability.CastRange + 50);
-                var spellCastPoint = (float)(ability.GetCastPoint() + Game.AvgPing / 1000);
+                var spellCastPoint = (float)(ability.GetCastPoint() + Game.Ping / 1000);
 
                 var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
                 foreach (var enemy in enemies)
                 {
                     double spellDamage;
                     if (complexKill)
-                        spellDamage = GetComplexDamage(ability.Level, enemy, me, normalDamage);
+                        spellDamage = GetComplexDamage(spellLevel, enemy, me, normalDamage);
                     else if (smartKill)
-                        spellDamage = GetSmartDamage(ability.Level, me, damage);
+                        spellDamage = GetSmartDamage(spellLevel, me, damage);
                     else
                         spellDamage = normalDamage;
 
                     var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, me, piercesSpellImmunity);
 
                     if (me.ClassID == ClassID.CDOTA_Unit_Hero_Axe)
-                        damageDone = (float) spellDamage;
+                        damageDone = (float)spellDamage;
 
-                    float damageNeeded;
+                    double damageNeeded;
 
                     if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded))
                     {
-                        damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
+                        damageNeeded = enemy.Health - damageDone + (spellCastPoint * enemy.HealthRegeneration) + MorphMustDie(enemy, spellCastPoint);
                         HeroDamageDictionary.Add(enemy, damageNeeded);
-                        HeroSpellDictionary.Add(enemy, ability);
+                        HeroSpellDictionary.Add(enemy, ability.Name);
                     }
                     else
                     {
                         HeroDamageDictionary.Remove(enemy);
                         HeroSpellDictionary.Remove(enemy);
-                        damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
-                        HeroDamageDictionary.Add(enemy, damageNeeded);
-                        HeroSpellDictionary.Add(enemy, ability);
-                    }
 
-                    if (_killstealEnabled && !me.IsChanneling())
-                    {
-                        if (damageNeeded < 0 && me.Distance2D(enemy) < spellRange && MeCanSurvive(enemy, me, ability, damageDone))
-                        {
-                            switch (spellTargetType)
-                            {
-                                case 1:
-                                    CastSpell(ability, enemy, me, lsblock);
-                                    break;
-                                case 2:
-                                    CastSpell(ability, enemy.Position, me, lsblock);
-                                    break;
-                                case 3:
-                                    if (ability.CanBeCasted() && me.CanCast())
-                                        ability.UseAbility();
-                                    break;
-                            }
-                            break;
-                        }
+                        damageNeeded = enemy.Health - damageDone + (spellCastPoint * enemy.HealthRegeneration) + MorphMustDie(enemy, spellCastPoint);
+
+                        HeroDamageDictionary.Add(enemy, damageNeeded);
+                        HeroSpellDictionary.Add(enemy, ability.Name);
                     }
+                    Console.Write(damageNeeded + " ");
+
+                    if (!_killstealEnabled || me.IsChanneling()) continue;
+
+                    if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, ability, damageDone)) continue;
+
+                    switch (spellTargetType)
+                    {
+                        case 1:
+                            CastSpell(ability, enemy, me, lsblock);
+                            break;
+                        case 2:
+                            CastSpell(ability, enemy.Position, me, lsblock);
+                            break;
+                        case 3:
+                            if (!(ability.Cooldown > 0) && ability.CanBeCasted() && me.CanCast())
+                                ability.UseAbility();
+                            break;
+                    }
+                    break;
                 }
             }
         }
@@ -274,39 +276,40 @@ namespace AIO_KillStealer
 
             if (blinkstrike.Level <= 0 || backstab.Level <= 0) return;
 
-            var spellDamage = damage[(int) blinkstrike.Level];
+            var spellDamage = damage[(int)blinkstrike.Level];
             var backstabDamage = (float)bs[backstab.Level] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
             var spellRange = blinkstrike.CastRange + 50;
-            var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.AvgPing / 1000);
+            var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
-                var damageBlinkstrike = enemy.DamageTaken((float) spellDamage, blinkstrike.DamageType, me, true);
-                var damageBackstab = enemy.DamageTaken(backstabDamage, backstab.DamageType, me, true);
-                float damageNeeded;
+                var damageBlinkstrike = Math.Floor(enemy.DamageTaken((float)spellDamage, blinkstrike.DamageType, me, true));
+                var damageBackstab = Math.Floor(enemy.DamageTaken(backstabDamage, backstab.DamageType, me, true));
+                double damageNeeded;
 
                 if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded))
                 {
-                    damageNeeded = enemy.Health - damageBlinkstrike - damageBackstab + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
+                    damageNeeded = Math.Floor(enemy.Health - damageBlinkstrike - damageBackstab + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint));
                     HeroDamageDictionary.Add(enemy, damageNeeded);
-                    HeroSpellDictionary.Add(enemy, blinkstrike);
+                    HeroSpellDictionary.Add(enemy, blinkstrike.Name);
                 }
                 else
                 {
                     HeroDamageDictionary.Remove(enemy);
                     HeroSpellDictionary.Remove(enemy);
-                    damageNeeded = enemy.Health - damageBlinkstrike - damageBackstab + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
+
+                    damageNeeded = Math.Floor(enemy.Health - damageBlinkstrike - damageBackstab + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint));
+
                     HeroDamageDictionary.Add(enemy, damageNeeded);
-                    HeroSpellDictionary.Add(enemy, blinkstrike);
+                    HeroSpellDictionary.Add(enemy, blinkstrike.Name);
                 }
-                if (_killstealEnabled && !me.IsChanneling())
-                {
-                    if (damageNeeded < 0 && me.Distance2D(enemy) < spellRange && MeCanSurvive(enemy, me, blinkstrike, damageBlinkstrike + damageBackstab))
-                    {
-                        CastSpell(blinkstrike, enemy, me, true);
-                        break;
-                    }
-                }
+
+                if (!_killstealEnabled || me.IsChanneling()) continue;
+
+                if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, blinkstrike, damageBlinkstrike + damageBackstab)) continue;
+
+                CastSpell(blinkstrike, enemy, me, true);
+                break;
             }
         }
 
@@ -315,9 +318,9 @@ namespace AIO_KillStealer
             switch (me.ClassID)
             {
                 case ClassID.CDOTA_Unit_Hero_AntiMage:
-                    return Math.Floor((enemy.MaximumMana - enemy.Mana)*damage);
+                    return Math.Floor((enemy.MaximumMana - enemy.Mana) * damage);
                 case ClassID.CDOTA_Unit_Hero_DoomBringer:
-                    var lvldeath = new[] {new[] { 6, 125 }, new[] { 5, 175 }, new[] { 4, 225 }, new[] { 3, 275 }};
+                    var lvldeath = new[] { new[] { 6, 125 }, new[] { 5, 175 }, new[] { 4, 225 }, new[] { 3, 275 } };
                     return Math.Floor((enemy.Level == 25 || enemy.Level % lvldeath[level][0] == 0) ? (enemy.MaximumHealth * 0.20 + lvldeath[level][1]) : (lvldeath[level][1]));
                 case ClassID.CDOTA_Unit_Hero_Mirana:
                     if (me.Distance2D(enemy) < 200)
@@ -326,42 +329,42 @@ namespace AIO_KillStealer
                 case ClassID.CDOTA_Unit_Hero_Necrolyte:
                     return Math.Floor((enemy.MaximumHealth - enemy.Health) * damage);
                 case ClassID.CDOTA_Unit_Hero_Nyx_Assassin:
-                    var tempBurn = damage*Math.Floor(enemy.TotalIntelligence);
+                    var tempBurn = damage * Math.Floor(enemy.TotalIntelligence);
                     return enemy.Mana < tempBurn ? enemy.Mana : tempBurn;
                 case ClassID.CDOTA_Unit_Hero_Obsidian_Destroyer:
                     if (me.TotalIntelligence > enemy.TotalIntelligence)
-                        return ((Math.Floor(me.TotalIntelligence) - Math.Floor(enemy.TotalIntelligence))*damage);
+                        return ((Math.Floor(me.TotalIntelligence) - Math.Floor(enemy.TotalIntelligence)) * damage);
                     return 0;
                 case ClassID.CDOTA_Unit_Hero_Elder_Titan:
-                    var pasDmg = new[] {1.12, 1.19, 1.25, 1.25};
+                    var pasDmg = new[] { 1.12, 1.19, 1.25, 1.25 };
                     var pas = me.Spellbook.Spell3.Level;
                     if (pas != 0)
-                    { 
+                    {
                         if (enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_elder_titan_natural_order") == null)
                             return (pasDmg[pas] * damage);
                         return damage;
                     }
                     return damage;
                 case ClassID.CDOTA_Unit_Hero_Shadow_Demon:
-                    var actDmg = new[] {1, 2, 4, 8, 16};
+                    var actDmg = new[] { 1, 2, 4, 8, 16 };
                     var poison = enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_shadow_demon_shadow_poison");
                     if (poison != null)
                     {
                         var poisonStack = poison.StackCount;
                         if (poisonStack != 0 && poisonStack < 6)
-                            return (actDmg[poisonStack])*damage;
+                            return (actDmg[poisonStack]) * damage;
                         if (poisonStack > 5)
                             return (damage * 16) + ((poisonStack - 5) * 50);
                     }
                     return 0;
                 case ClassID.CDOTA_Unit_Hero_Legion_Commander:
-                    var bonusCreep = new[] {14, 16, 18, 20};
-                    var bonusHero = new[] {20, 35, 50, 65};
+                    var bonusCreep = new[] { 14, 16, 18, 20 };
+                    var bonusHero = new[] { 20, 35, 50, 65 };
                     var heroDmg = ObjectMgr.GetEntities<Hero>().Where(hero => hero.IsAlive && hero.Team == me.GetEnemyTeam() && hero.IsVisible && hero.Health > 0 && enemy.Distance2D(hero) < 330).ToList().Count * bonusHero[level];
                     var creepDmg = ObjectMgr.GetEntities<Unit>().Where(unit => ((unit.ClassID == ClassID.CDOTA_BaseNPC_Creep && unit.ClassID != ClassID.CDOTA_BaseNPC_Creature && !unit.IsAncient) || unit.ClassID == ClassID.CDOTA_Unit_VisageFamiliar || unit.ClassID == ClassID.CDOTA_Unit_Undying_Zombie || unit.ClassID == ClassID.CDOTA_Unit_SpiritBear || unit.ClassID == ClassID.CDOTA_Unit_Broodmother_Spiderling || unit.ClassID == ClassID.CDOTA_Unit_Hero_Beastmaster_Boar || unit.ClassID == ClassID.CDOTA_Unit_Hero_Beastmaster_Hawk || unit.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit) && unit.Team != me.Team && unit.IsAlive && unit.IsVisible && unit.Health > 0 && enemy.Distance2D(unit) < 350).ToList().Count * bonusCreep[level];
-                    return  Math.Floor((damage + heroDmg + creepDmg));
+                    return Math.Floor((damage + heroDmg + creepDmg));
                 case ClassID.CDOTA_Unit_Hero_Zuus:
-                    var hp = new[] {.05, .07, .09, .11};
+                    var hp = new[] { .05, .07, .09, .11 };
                     if (me.Spellbook.Spell3.Level > 0 && me.Distance2D(enemy) < 1000)
                         damage = (damage + ((hp[me.Spellbook.Spell3.Level]) * enemy.Health));
                     return damage;
@@ -406,14 +409,14 @@ namespace AIO_KillStealer
             return baseDmg;
         }
 
-        private static bool MeCanSurvive(Hero enemy, Hero me, Ability spell, float damageDone)
+        private static bool MeCanSurvive(Hero enemy, Hero me, Ability spell, double damageDone)
         {
             return (me.IsMagicImmune() || (NotDieFromSpell(spell, enemy, me) && enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_nyx_assassin_spiked_carapace") == null && NotDieFromBladeMail(enemy, me, damageDone)));
         }
 
-        private static bool NotDieFromBladeMail(Unit enemy, Unit me, float damageDone)
+        private static bool NotDieFromBladeMail(Unit enemy, Unit me, double damageDone)
         {
-            return !(enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_blade_mail_reflect") != null && me.Health < me.DamageTaken(damageDone, DamageType.Magical, enemy, false));
+            return !(enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_blade_mail_reflect") != null && me.Health < me.DamageTaken((float)damageDone, DamageType.Magical, enemy, false));
         }
 
         private static bool NotDieFromSpell(Ability spell, Hero enemy, Hero me)
@@ -425,11 +428,13 @@ namespace AIO_KillStealer
 
         private static void CastSpell(Ability spell, Unit target, Unit me, bool lsblock)
         {
+            if (spell.Cooldown > 0) return;
             if (spell.CanBeCasted() && me.CanCast() && (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_sphere") == null || target.FindItem("item_sphere").Cooldown > 0) || lsblock == false)
                 spell.UseAbility(target);
         }
         private static void CastSpell(Ability spell, Vector3 targetPos, Unit me, bool lsblock)
         {
+            if (spell.Cooldown > 0) return;
             if (spell.CanBeCasted() && me.CanCast() || lsblock == false)
                 spell.UseAbility(targetPos);
         }
@@ -471,19 +476,21 @@ namespace AIO_KillStealer
                 Vector2 screenPos;
                 var enemyPos = enemy.Position + new Vector3(0, 0, enemy.HealthBarOffset);
 
-                if (Drawing.WorldToScreen(enemyPos, out screenPos))
+                if (enemy.HealthBarOffset == -1) continue;
+
+                if (!Drawing.WorldToScreen(enemyPos, out screenPos)) continue;
+
+                var start = screenPos + new Vector2(-51, -40);
+                double damageNeeded;
+                string spell;
+
+                if (HeroDamageDictionary.TryGetValue(enemy, out damageNeeded) && HeroSpellDictionary.TryGetValue(enemy, out spell))
                 {
-                    var start = screenPos + new Vector2(-51, -40);
-                    float damageNeeded;
-                    Ability spell;
-                    if (HeroDamageDictionary.TryGetValue(enemy, out damageNeeded) && HeroSpellDictionary.TryGetValue(enemy, out spell))
-                    {
-                        var text = "D a m a g e  f o r  K S: " + Math.Floor(damageNeeded).ToString(CultureInfo.InvariantCulture);
-                        var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
-                        var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
-                        //Drawing.DrawRect(textPos - new Vector2(-10,0), new Vector2(24,24), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell.Name + ".vmt"));
-                        Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), damageNeeded < 0 ? new Color(0x99FFFF99) : new Color(0xFFFFFF99), FontFlags.AntiAlias | FontFlags.DropShadow);
-                    }
+                    var text = "D a m a g e  f o r  K S: " + Math.Floor(damageNeeded).ToString(CultureInfo.InvariantCulture);
+                    var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
+                    var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
+                    Drawing.DrawRect(textPos - new Vector2(15, 0), new Vector2(10, 10), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell + ".vmt"));
+                    Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), damageNeeded < 0 ? Color.Red : Color.White, FontFlags.AntiAlias | FontFlags.DropShadow);
                 }
             }
         }
