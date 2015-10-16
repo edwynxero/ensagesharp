@@ -24,11 +24,11 @@ namespace LastHitMarker
             var player = ObjectMgr.LocalPlayer;
             var me = player.Hero;
 
-            if (player == null || player.Team == Team.Observer || me == null || me.DamageAverage > 100)
+            if (player == null || player.Team == Team.Observer || me == null || me.MinimumDamage > 120)
                 return;
 
             var quelling_blade = me.FindItem(" item_quelling_blade ");
-            var damage = (quelling_blade != null) ? (me.DamageAverage*1.40 + me.BonusDamage) : (me.DamageAverage + me.BonusDamage);
+            var damage = (quelling_blade != null) ? (me.MinimumDamage * 1.40 + me.BonusDamage) : (me.MinimumDamage + me.BonusDamage);
 
             var creeps = ObjectMgr.GetEntities<Unit>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege) && creep.IsSpawned).ToList();
 
