@@ -23,7 +23,7 @@ namespace AIO_KillStealer
 
         private static void KillStealer_OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused)
+            if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !_killstealEnabled)
                 return;
             Utils.Sleep(250, "AIO_KillStealer");
 
