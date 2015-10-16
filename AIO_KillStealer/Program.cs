@@ -37,10 +37,10 @@ namespace AIO_KillStealer
                     Kill(me, me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Alchemist:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 24, 33, 42, 52.5 }, 1, 800, false, false, true);
+                    Kill(me, me.Spellbook.Spell2, new[] { 24, 33, 42, 52.5 }, 1, 800, false, false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_AntiMage:
-                    Kill(me, me.Spellbook.Spell4, new double[] { .6, .85, 1.1 }, 1, null, false, true, false, true);
+                    Kill(me, me.Spellbook.Spell4, new[] { .6, .85, 1.1 }, 1, null, false, true, false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Axe:
                     Kill(me, me.Spellbook.Spell4, new double[] { 250, 325, 400 }, 1, null, true, true, false, false, new double[] { 300, 425, 550 });
@@ -110,13 +110,13 @@ namespace AIO_KillStealer
                     Kill(me, me.Spellbook.Spell2, new double[] { 20, 40, 60, 80 }, 1, null, true, false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Necrolyte:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 0.4, 0.6, 0.9 }, 1, null, true, true, false, true, new double[] { 0.6, 0.9, 1.2 });
+                    Kill(me, me.Spellbook.Spell4, new[] { 0.4, 0.6, 0.9 }, 1, null, true, true, false, true, new[] { 0.6, 0.9, 1.2 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_NightStalker:
                     Kill(me, me.Spellbook.Spell1, new double[] { 90, 160, 225, 335 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Nyx_Assassin:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 3.5, 4, 4.5, 5 }, 1, null, true, false, false, true);
+                    Kill(me, me.Spellbook.Spell2, new[] { 3.5, 4, 4.5, 5 }, 1, null, true, false, false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Obsidian_Destroyer:
                     Kill(me, me.Spellbook.Spell4, new double[] { 8, 9, 10 }, 2, null, false, false, false, true, new double[] { 9, 10, 11 });
@@ -180,7 +180,7 @@ namespace AIO_KillStealer
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tusk:
                     var tuskDamage = (me.MinimumDamage + me.BonusDamage)*3.5;
-                    Kill(me, me.Spellbook.Spell6, new double[] { tuskDamage, tuskDamage, tuskDamage }, 1, 300, false);
+                    Kill(me, me.Spellbook.Spell6, new[] { tuskDamage, tuskDamage, tuskDamage }, 1, 300, false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Undying:
                     Kill(me, me.Spellbook.Spell2, new double[] { 10, 12, 14, 16 }, 1, null, true, false, true);
@@ -343,11 +343,11 @@ namespace AIO_KillStealer
                     var poison = enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_shadow_demon_shadow_poison");
                     if (poison != null)
                     {
-                        var Mod = poison.StackCount;
-                        if (Mod != 0 && Mod < 6)
-                            return (actDmg[Mod])*damage;
-                        else if (Mod > 5)
-                            return (damage * 16) + ((Mod - 5) * 50);
+                        var poisonStack = poison.StackCount;
+                        if (poisonStack != 0 && poisonStack < 6)
+                            return (actDmg[poisonStack])*damage;
+                        if (poisonStack > 5)
+                            return (damage * 16) + ((poisonStack - 5) * 50);
                     }
                     return 0;
                 case ClassID.CDOTA_Unit_Hero_Legion_Commander:
@@ -404,35 +404,28 @@ namespace AIO_KillStealer
 
         private static bool MeCanSurvive(Hero enemy, Hero me, Ability spell, float damageDone)
         {
-            if (me.IsMagicImmune() || (NotDieFromSpell(spell, enemy, me) && enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_nyx_assassin_spiked_carapace") == null && NotDieFromBladeMail(enemy, me, damageDone)))
-                return true;
-            return false;
+            return (me.IsMagicImmune() || (NotDieFromSpell(spell, enemy, me) && enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_nyx_assassin_spiked_carapace") == null && NotDieFromBladeMail(enemy, me, damageDone)));
         }
 
-        private static bool NotDieFromBladeMail(Hero enemy, Hero me, float damageDone)
+        private static bool NotDieFromBladeMail(Unit enemy, Unit me, float damageDone)
         {
-            if (enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_blade_mail_reflect") != null && me.Health < me.DamageTaken(damageDone, DamageType.Magical, enemy, false))
-                return false;
-            return true;
+            return !(enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_blade_mail_reflect") != null && me.Health < me.DamageTaken(damageDone, DamageType.Magical, enemy, false));
         }
 
         private static bool NotDieFromSpell(Ability spell, Hero enemy, Hero me)
         {
-            if (me.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_pugna_nether_ward_aura") != null)
-                if (me.Health < me.DamageTaken((spell.ManaCost * (float)1.75), DamageType.Magical, enemy, false))
-                    return false;
-            return true;
+            if (me.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_pugna_nether_ward_aura") == null)
+                return true;
+            return !(me.Health < me.DamageTaken((spell.ManaCost * (float)1.75), DamageType.Magical, enemy, false));
         }
 
         private static void CastSpell(Ability spell, Unit target, Unit me, bool lsblock)
         {
-            Console.Write("casting!");
             if (spell.CanBeCasted() && me.CanCast() && (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_item_sphere") == null || target.FindItem("item_sphere").Cooldown > 0) || lsblock == false)
                 spell.UseAbility(target);
         }
         private static void CastSpell(Ability spell, Vector3 targetPos, Unit me, bool lsblock)
         {
-            Console.Write("casting!");
             if (spell.CanBeCasted() && me.CanCast() || lsblock == false)
                 spell.UseAbility(targetPos);
         }
@@ -452,13 +445,14 @@ namespace AIO_KillStealer
             return 0;
         }
 
+        /*
         private static void KillStealer_OnWndProc(WndEventArgs args)
         {
             if (args.Msg != (ulong)Utils.WindowsMessages.WM_KEYUP || args.WParam != 'Z' || Game.IsChatOpen)
                 return;
             _killstealEnabled = !_killstealEnabled;
         }
-
+        */
         private static void KillStealer_OnDraw(EventArgs args)
         {
             if (!Game.IsInGame || Game.IsPaused)
@@ -484,11 +478,7 @@ namespace AIO_KillStealer
                         var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
                         var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
                         //Drawing.DrawRect(textPos - new Vector2(-10,0), new Vector2(24,24), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell.Name + ".vmt"));
-                        if(damageNeeded < 0)
-                            Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), new Color(0x99FFFF99), FontFlags.AntiAlias | FontFlags.DropShadow);
-                        else
-                            Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), new Color(0xFFFFFF99), FontFlags.AntiAlias | FontFlags.DropShadow);
-
+                        Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), damageNeeded < 0 ? new Color(0x99FFFF99) : new Color(0xFFFFFF99), FontFlags.AntiAlias | FontFlags.DropShadow);
                     }
                 }
             }
