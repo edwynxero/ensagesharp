@@ -200,7 +200,11 @@ namespace AIO_KillStealer
         {
             if (ability.Level > 0)
             {
-                var normalDamage = me.AghanimState() ? damage[(int) ability.Level] : adamage[(int) ability.Level];
+                double normalDamage;
+                if (adamage == null)
+                    normalDamage = damage[(int) ability.Level];
+                else
+                    normalDamage = me.AghanimState() ? damage[(int) ability.Level] : adamage[(int) ability.Level];
 
                 var spellDamageType = ability.DamageType;
                 var spellRange = range ?? (ability.CastRange + 50);
