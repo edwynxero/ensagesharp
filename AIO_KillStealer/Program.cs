@@ -43,7 +43,7 @@ namespace AIO_KillStealer
                     Kill(me, me.Spellbook.Spell4, new[] { .6, .85, 1.1 }, 1, null, false, true, false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Axe:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 250, 325, 400 }, 1, null, true, true, false, false, new double[] { 300, 425, 550 });
+                    Kill(me, me.Spellbook.Spell4, new double[] { 250, 325, 400 }, 1, 400, true, true, false, false, new double[] { 300, 425, 550 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_Bane:
                     Kill(me, me.Spellbook.Spell2, new double[] { 90, 160, 230, 300 }, 1, null, true, true);
