@@ -31,10 +31,11 @@ namespace AutoAegis
             if (hero == null || !AutoAegisEnabled)
                 return;
             
-            var roshanItems = ObjectMgr.GetEntities<PhysicalItem>().Where(x => x.IsVisible && GetDistance2D(x.NetworkPosition, hero.NetworkPosition) < 400 && (x.Item.Name == "item_aegis" || x.Item.Name == "item_cheese")).ToList();
+            var roshanItems = ObjectMgr.GetEntities<PhysicalItem>().Where(x => x.IsVisible && (x.Item.Name == "item_aegis" || x.Item.Name == "item_cheese")).ToList();
 
             if (!roshanItems.Any() && !hero.Inventory.FreeSlots.Any()) return;
-            hero.PickUpItem(roshanItems.First());
+            foreach (var item in roshanItems.Where(item => GetDistance2D(item.NetworkPosition, hero.NetworkPosition) < 400))
+                hero.PickUpItem(item);
         }
 
         private static void AutoAegis()
@@ -42,9 +43,7 @@ namespace AutoAegis
             var hero = ObjectMgr.LocalHero;
             if (hero == null || !AutoAegisEnabled)
                 return;
-            var heroId = hero.ClassID;
-
-            var blinkDagger = hero.FindItem("item_blink");
+            
             var aegisLoc = new Vector3(4150, -1880, 0);
             var spellLoc = new Vector3(4077, -2143, 0);
 
@@ -52,6 +51,8 @@ namespace AutoAegis
             if (aegisDistance < 400)
                 return;
 
+            var heroId = hero.ClassID;
+            var blinkDagger = hero.FindItem("item_blink");
             if (aegisDistance <= 1200 && blinkDagger != null && blinkDagger.CanBeCasted())
                 CastSpell(blinkDagger, aegisLoc);
             else if (heroId == ClassID.CDOTA_Unit_Hero_EmberSpirit && GetDistance2D(spellLoc, hero.NetworkPosition) <= 700)
