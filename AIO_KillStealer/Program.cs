@@ -484,7 +484,7 @@ namespace AIO_KillStealer
 
                 if (HeroDamageDictionary.TryGetValue(enemy, out damageNeeded) && HeroSpellDictionary.TryGetValue(enemy, out spell))
                 {
-                    var text = "D a m a g e  f o r  K S: " + $"{(int) damageNeeded}";
+                    var text = "D a m a g e  f o r  K S: " + string.Format("{0}",(int) damageNeeded);
                     var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
                     var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
                     Drawing.DrawRect(textPos - new Vector2(15, 0), new Vector2(10, 10), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell + ".vmt"));
