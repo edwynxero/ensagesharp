@@ -229,7 +229,6 @@ namespace OverlayInformation
                     try { spells[4] = enemy.Spellbook.Spell4;} catch {/*ignored*/}
                     try { spells[5] = enemy.Spellbook.Spell5;} catch {/*ignored*/}
                     try { spells[6] = enemy.Spellbook.Spell6;} catch {/*ignored*/}
-
                     for (var index = 1; index < 7; index++)
                     {
                         if (spells[index] == null ) continue;
@@ -260,19 +259,19 @@ namespace OverlayInformation
                     itemtab[enemy] = 0;
                     if (enemy.FindItem("item_gem") != null) {
                         itemtab[enemy] = itemtab[enemy] + 20 * rate;
-                        Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_gem"));
+                        //Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_gem"));
                     }
                     if (enemy.FindItem("item_dust") != null) {
                         itemtab[enemy] = itemtab[enemy] + 20 * rate;
-                        Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_dust"));
+                        //Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_dust"));
                     }
                     if (enemy.FindItem("item_dust") != null) {
                         itemtab[enemy] = itemtab[enemy] + 20 * rate;
-                        Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_sentry"));
+                        //Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_sentry"));
                     }
                     if (enemy.FindItem("item_sphere") != null) {
                         itemtab[enemy] = itemtab[enemy] + 20 * rate;
-                        Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_sphere"));
+                        //Drawing.DrawRect(screenPos + new Vector2(itemtab[enemy] - itemX - 18 * rate, -itemY + 7), new Vector2(18 * rate, 16 * rate), Drawing.GetTexture("materials/NyanUI/other/O_sphere"));
                     }
                 }
             }
