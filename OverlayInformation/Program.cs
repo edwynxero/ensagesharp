@@ -19,9 +19,10 @@ namespace OverlayInformation
         public static bool OverlayCourier = true;
         public static bool OverlayHeroInformation = true;
 
-        private static int _screenX = Drawing.Width;
-        private static int _screenY = Drawing.Height;
+        private static int _screenX;
+        private static int _screenY;
 
+        #region ScreenVariables
         private static float _testX;
         private static float _testY;
 
@@ -41,8 +42,11 @@ namespace OverlayInformation
 
         private static double _txxB;
         private static double _txxG;
+        #endregion
 
+        private static bool _overlayInformationLoaded;
         private static Player _player = ObjectMgr.LocalPlayer;
+        private static Hero _me = ObjectMgr.LocalHero;
 
         private static void Main()
         {
@@ -52,127 +56,37 @@ namespace OverlayInformation
 
         private static void OverlayInformation_OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame) return;
-            Utils.Sleep(250, "OverlayInformation");
-
-            _player = ObjectMgr.LocalPlayer;
-            var me = _player.Hero;
-
-            if (_player == null || me == null) return;
-
-            var screenRatio = _screenX / _screenY;
-
-            switch ((int)Math.Floor((decimal) (screenRatio * 100)))
+            if (!_overlayInformationLoaded)
             {
-                case 177:
-                    _testX = 1600;
-                    _testY = 900;
+                if (!Game.IsInGame) return;
 
-                    _panelSize = 55;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 20;
+                _player = ObjectMgr.LocalPlayer;
+                _me = ObjectMgr.LocalHero;
 
-                    _manaBarX = 42;
-                    _manaBarY = 18;
-                    _manaBarSize = 83;
-
-                    _glyphX = 1.0158;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.535;
-                    _txxG = 3.485;
-                    break;
-                case 166:
-                    _testX = 1280;
-                    _testY = 768;
-
-                    _panelSize = 47.1;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 18;
-
-                    _manaBarX = 36;
-                    _manaBarY = 15;
-                    _manaBarSize = 70;
-
-                    _glyphX = 1.0180;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.59;
-                    _txxG = 3.66;
-                    break;
-                case 160:
-                    _testX = 1280;
-                    _testY = 800;
-
-                    _panelSize = 48.5;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 20;
-
-                    _manaBarX = 38;
-                    _manaBarY = 16;
-                    _manaBarSize = 74;
-
-                    _glyphX = 1.0180;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.579;
-                    _txxG = 3.74;
-                    break;
-                case 133:
-                    _testX = 1024;
-                    _testY = 768;
-
-                    _panelSize = 47;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 18;
-
-                    _manaBarX = 37;
-                    _manaBarY = 14;
-                    _manaBarSize = 72;
-
-                    _glyphX = 1.021;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.78;
-                    _txxG = 4.63;
-                    break;
-                case 125:
-                    _testX = 1280;
-                    _testY = 1024;
-
-                    _panelSize = 58;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 23;
-
-                    _manaBarX = 48;
-                    _manaBarY = 21;
-                    _manaBarSize = 97;
-
-                    _glyphX = 1.021;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.747;
-                    _txxG = 4.54;
-                    break;
-                default:
-                    _testX = 1600;
-                    _testY = 900;
-
-                    _panelSize = 55;
-                    _panelHealth = 25.714;
-                    _panelUltimate = 20;
-
-                    _manaBarX = 42;
-                    _manaBarY = 18;
-                    _manaBarSize = 83;
-
-                    _glyphX = 1.0158;
-                    _glyphY = 1.03448;
-
-                    _txxB = 2.535;
-                    _txxG = 3.485;
-                    break;
+                if (_player == null || _me == null) return;
+                SetScreenVariables();
+                _overlayInformationLoaded = true;
+                Console.Write("#Overlay Information: Loaded!");
             }
+
+            if (!Game.IsInGame || _me == null)
+            {
+                _overlayInformationLoaded = false;
+                Console.Write("#Overlay Information: UnLoaded!");
+                return;
+            }
+        }
+
+        private static void OverlayInformation_OnDraw(EventArgs args)
+        {
+            if (!Game.IsInGame || !_overlayInformationLoaded || _player == null || _me == null) return;
+
+            var rate = _screenX/ _testX;
+            var con = rate;
+            if (rate < 1) rate = 1;
+
+            var players = ObjectMgr.GetEntities<Player>().Where(player => !player.Hero.IsIllusion).ToList();
+            if (!players.Any()) return;
 
             if (OverlayRune)
             {
@@ -184,21 +98,7 @@ namespace OverlayInformation
                 var couriers = ObjectMgr.GetEntities<Courier>().Where(courier => courier.Team == _player.Hero.GetEnemyTeam()).ToList();
                 //OverlayCourier(couriers);
             }
-        }
 
-        private static void OverlayInformation_OnDraw(EventArgs args)
-        {
-            if (!Game.IsInGame || _player == null) return;
-
-           _screenX = Drawing.Width;
-           _screenY = Drawing.Height;
-
-            var rate = _screenX/ _testX;
-            var con = rate;
-            if (rate < 1) rate = 1;
-
-            var players = ObjectMgr.GetEntities<Player>().Where(player => !player.Hero.IsIllusion).ToList();
-            if (!players.Any()) return;
             
             foreach (var enemy in players.Where(player => player.Hero.Team != _player.Hero.Team).Select(player => player.Hero).Where(hero => hero.IsVisible && hero.IsAlive && hero.IsVisible))
             {
@@ -347,6 +247,123 @@ namespace OverlayInformation
             if (team == Team.Dire)
                 return 5 - count + id;
             return id;
+        }
+
+        private static void SetScreenVariables()
+        {
+            _screenX = Drawing.Width;
+            _screenY = Drawing.Height;
+            switch ((int)Math.Floor((decimal)(_screenX / _screenY * 100)))
+            {
+                case 177:
+                    _testX = 1600;
+                    _testY = 900;
+
+                    _panelSize = 55;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 20;
+
+                    _manaBarX = 42;
+                    _manaBarY = 18;
+                    _manaBarSize = 83;
+
+                    _glyphX = 1.0158;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.535;
+                    _txxG = 3.485;
+                    break;
+                case 166:
+                    _testX = 1280;
+                    _testY = 768;
+
+                    _panelSize = 47.1;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 18;
+
+                    _manaBarX = 36;
+                    _manaBarY = 15;
+                    _manaBarSize = 70;
+
+                    _glyphX = 1.0180;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.59;
+                    _txxG = 3.66;
+                    break;
+                case 160:
+                    _testX = 1280;
+                    _testY = 800;
+
+                    _panelSize = 48.5;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 20;
+
+                    _manaBarX = 38;
+                    _manaBarY = 16;
+                    _manaBarSize = 74;
+
+                    _glyphX = 1.0180;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.579;
+                    _txxG = 3.74;
+                    break;
+                case 133:
+                    _testX = 1024;
+                    _testY = 768;
+
+                    _panelSize = 47;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 18;
+
+                    _manaBarX = 37;
+                    _manaBarY = 14;
+                    _manaBarSize = 72;
+
+                    _glyphX = 1.021;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.78;
+                    _txxG = 4.63;
+                    break;
+                case 125:
+                    _testX = 1280;
+                    _testY = 1024;
+
+                    _panelSize = 58;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 23;
+
+                    _manaBarX = 48;
+                    _manaBarY = 21;
+                    _manaBarSize = 97;
+
+                    _glyphX = 1.021;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.747;
+                    _txxG = 4.54;
+                    break;
+                default:
+                    _testX = 1600;
+                    _testY = 900;
+
+                    _panelSize = 55;
+                    _panelHealth = 25.714;
+                    _panelUltimate = 20;
+
+                    _manaBarX = 42;
+                    _manaBarY = 18;
+                    _manaBarSize = 83;
+
+                    _glyphX = 1.0158;
+                    _glyphY = 1.03448;
+
+                    _txxB = 2.535;
+                    _txxG = 3.485;
+                    break;
+            }
         }
     }
 }
