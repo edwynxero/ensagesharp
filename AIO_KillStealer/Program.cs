@@ -10,197 +10,226 @@ namespace AIO_KillStealer
 {
     internal class Program
     {
-        public static bool KillStealEnabled = true;
         private static readonly Dictionary<Hero, double> HeroDamageDictionary = new Dictionary<Hero, double>();
         private static readonly Dictionary<Hero, string> HeroSpellDictionary = new Dictionary<Hero, string>();
+
+        private static bool _killError = false;
+        private static bool _killStealEnabled;
+        private static bool _activ = true;
+        
         private static Player _player;
+        private static Hero _me;
         private static void Main(string[] args)
         {
-            //Game.OnWndProc += KillStealer_OnWndProc;
-            Game.OnUpdate += KillStealer_OnUpdate;
-            Drawing.OnDraw += KillStealer_OnDraw;
+            Game.OnWndProc += Game_OnWndProc;
+            Game.OnUpdate += Game_OnUpdate;
+            Drawing.OnDraw += Game_OnDraw;
         }
 
-        private static void KillStealer_OnUpdate(EventArgs args)
+        private static void Game_OnUpdate(EventArgs args)
         {
-            if (!Game.IsInGame || !Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !KillStealEnabled)
-                return;
-            Utils.Sleep(100, "AIO_KillStealer");
+            if (!_killStealEnabled)
+            {
+                if (!Game.IsInGame) return;
 
-            _player = ObjectMgr.LocalPlayer;
-            var me = _player.Hero;
-            if (_player == null || me == null)
-                return;
+                _player = ObjectMgr.LocalPlayer;
+                _me = ObjectMgr.LocalHero;
 
-            switch (me.ClassID)
+                if (_player == null || _me == null) return;
+
+                _killStealEnabled = true;
+                Console.Write("#AIO Kill-Stealer: Loaded!");
+            } else if (!Game.IsInGame || _player == null || _me == null)
+            {
+                _killStealEnabled = false;
+                Console.Write("#AIO Kill-Stealer: UnLoaded!");
+                return;
+            }
+
+            if (!Utils.SleepCheck("AIO_KillStealer") || Game.IsPaused || !_activ) return;
+            Utils.Sleep(250, "AIO_KillStealer");
+
+            if (_me == null) return;
+            switch (_me.ClassID)
             {
                 case ClassID.CDOTA_Unit_Hero_Abaddon:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Alchemist:
-                    Kill(me, me.Spellbook.Spell2, new[] { 24, 33, 42, 52.5 }, 1, 800, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new[] { 24, 33, 42, 52.5 }, 1, 800, "smart");
                     break;
                 case ClassID.CDOTA_Unit_Hero_AntiMage:
-                    Kill(me, me.Spellbook.Spell4, new[] { .6, .85, 1.1 }, 1, null, false, true, false, true);
+                    Kill(_me, _me.Spellbook.Spell4, new[] { .6, .85, 1.1 }, 1, null, "complex", false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Axe:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 250, 325, 400 }, 1, 400, true, true, false, false, new double[] { 300, 425, 550 });
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 250, 325, 400 }, 1, 400, "normal", true, true, new double[] { 300, 425, 550 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_Bane:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 90, 160, 230, 300 }, 1, null, true, true);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 90, 160, 230, 300 }, 1, null, "normal", true, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_BountyHunter:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 200, 250, 325 }, 1, 700);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 200, 250, 325 }, 1, 700);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Broodmother:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Centaur:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 175, 250, 325, 400 }, 1, 300);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 175, 250, 325, 400 }, 1, 300);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Chen:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 50, 100, 150, 200 }, 1);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 50, 100, 150, 200 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_CrystalMaiden:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 2, 700, false);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 2, 700, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_DeathProphet:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 1, null, false);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 1, null, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_DoomBringer:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 1, 1, 1, 1 }, 1, null, true, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 1, 1, 1, 1 }, 1, null, "complex");
                     break;
                 case ClassID.CDOTA_Unit_Hero_DragonKnight:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 90, 170, 240, 300 }, 1, null, false);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 90, 170, 240, 300 }, 1, null, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Earthshaker:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 125, 175, 225, 275 }, 2, null, false);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 125, 175, 225, 275 }, 2, null, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_EarthSpirit:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 125, 125, 125, 125 }, 1, 250);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 125, 125, 125, 125 }, 1, 250);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Elder_Titan:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 60, 90, 120, 150 }, 2, 250, false, true, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 60, 90, 120, 150 }, 2, 250, "complex", false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Furion:
+                    //Kill(Hero, Ability, damage, spellTargetType, range = null, killType, lsblock, piercesSpellImmunity, adamage)
                     break;
                 case ClassID.CDOTA_Unit_Hero_Leshrac:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 80, 140, 200, 260 }, 1);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 80, 140, 200, 260 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Legion_Commander:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 40, 80, 120, 160 }, 2, null, false, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 40, 80, 120, 160 }, 2, null, "complex", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Lich:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 115, 200, 275, 350 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 115, 200, 275, 350 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Lion:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 600, 725, 850 }, 1, null, true, false, false, false, new double[] { 725, 875, 1025 });
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 600, 725, 850 }, 1, null, "normal", true, false, new double[] { 725, 875, 1025 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_Lina:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 450, 675, 950 }, 1, null, true, me.AghanimState());
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 450, 675, 950 }, 1, null, "normal", true, _me.AghanimState());
                     break;
                 case ClassID.CDOTA_Unit_Hero_Luna:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 75, 150, 210, 260 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 75, 150, 210, 260 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Magnataur:
                     break;
                 case ClassID.CDOTA_Unit_Hero_Mirana:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 3, 625, false, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 75, 150, 225, 300 }, 3, 625, "complex", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Morphling:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 20, 40, 60, 80 }, 1, null, true, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 20, 40, 60, 80 }, 1, null, "smart");
                     break;
                 case ClassID.CDOTA_Unit_Hero_Necrolyte:
-                    Kill(me, me.Spellbook.Spell4, new[] { 0.4, 0.6, 0.9 }, 1, null, true, true, false, true, new[] { 0.6, 0.9, 1.2 });
+                    Kill(_me, _me.Spellbook.Spell4, new[] { 0.4, 0.6, 0.9 }, 1, null, "complex", true, true, new[] { 0.6, 0.9, 1.2 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_NightStalker:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 90, 160, 225, 335 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 90, 160, 225, 335 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Nyx_Assassin:
-                    Kill(me, me.Spellbook.Spell2, new[] { 3.5, 4, 4.5, 5 }, 1, null, true, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new[] { 3.5, 4, 4.5, 5 }, 1, null, "complex", true, false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Obsidian_Destroyer:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 8, 9, 10 }, 2, null, false, false, false, true, new double[] { 9, 10, 11 });
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 8, 9, 10 }, 2, null, "complex", false, false, new double[] { 9, 10, 11 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_Oracle:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 90, 180, 270, 360 }, 1);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 90, 180, 270, 360 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_PhantomLancer:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Puck:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 70, 140, 210, 280 }, 3, 400, false);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 70, 140, 210, 280 }, 3, 400, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_PhantomAssassin:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 30, 50, 70, 90 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 30, 50, 70, 90 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_QueenOfPain:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 85, 165, 225, 300 }, 3, 475, false);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 85, 165, 225, 300 }, 3, 475, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Rattletrap:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 80, 120, 160, 200 }, 2, 1000, false);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 80, 120, 160, 200 }, 2, 1000, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Riki:
-                    Riki_Kill(me, me.Spellbook.Spell4, new double[] { 40, 70, 100 });
+                    Riki_Kill(_me, _me.Spellbook.Spell4, new double[] { 40, 70, 100 });
                     break;
                 case ClassID.CDOTA_Unit_Hero_Rubick:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 70, 140, 210, 280 }, 1);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 70, 140, 210, 280 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_SkeletonKing:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 80, 160, 230, 300 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 80, 160, 230, 300 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Shredder:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 3, 300, false);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 3, 300, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Spectre:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 50, 100, 150, 200 }, 1, 2000);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 50, 100, 150, 200 }, 1, 2000);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Shadow_Demon:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 20, 35, 60, 65 }, 2, null, false, false, false, true);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 20, 35, 60, 65 }, 2, null, "complex", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_ShadowShaman:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 140, 200, 260, 320 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 140, 200, 260, 320 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Sniper:
-                    Kill(me, me.Spellbook.Spell4, new double[] { 350, 500, 650 }, 1);
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 350, 500, 650 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Sven:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 175, 250, 325 }, 1, 650);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 175, 250, 325 }, 1, 650);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Techies:
-                    Kill(me, me.Spellbook.Spell3, new double[] { 500, 650, 850, 1150 }, 1, 250, false, true);
+                    Kill(_me, _me.Spellbook.Spell3, new double[] { 500, 650, 850, 1150 }, 1, 250, "normal", false, true);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tidehunter:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 110, 160, 210, 260 }, 1, 750);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 110, 160, 210, 260 }, 1, 750);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tinker:
-                    if (me.FindSpell("tinker_laser").AbilityState == AbilityState.Ready)
-                        Kill(me, me.Spellbook.Spell1, new double[] { 80, 160, 240, 320 }, 1);
-                    else if (me.FindSpell("tinker_heat_seeking_missile").AbilityState == AbilityState.Ready)
-                        Kill(me, me.Spellbook.Spell2, new double[] { 125, 200, 275, 350 }, 3, 2500);
+                    if (_me.FindSpell("tinker_laser").AbilityState == AbilityState.Ready)
+                        Kill(_me, _me.Spellbook.Spell1, new double[] { 80, 160, 240, 320 }, 1);
+                    else if (_me.FindSpell("tinker_heat_seeking_missile").AbilityState == AbilityState.Ready)
+                        Kill(_me, _me.Spellbook.Spell2, new double[] { 125, 200, 275, 350 }, 3, 2500);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tusk:
-                    var tuskDamage = (me.MinimumDamage + me.BonusDamage) * 3.5;
-                    Kill(me, me.Spellbook.Spell6, new[] { tuskDamage, tuskDamage, tuskDamage }, 1, 300, false);
+                    var tuskDamage = (_me.MinimumDamage + _me.BonusDamage) * 3.5;
+                    Kill(_me, _me.Spellbook.Spell6, new[] { tuskDamage, tuskDamage, tuskDamage }, 1, 300, "normal", false);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Undying:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 10, 12, 14, 16 }, 1, null, true, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 10, 12, 14, 16 }, 1, null, "smart");
                     break;
                 case ClassID.CDOTA_Unit_Hero_VengefulSpirit:
-                    Kill(me, me.Spellbook.Spell1, new double[] { 100, 175, 250, 325 }, 1);
+                    Kill(_me, _me.Spellbook.Spell1, new double[] { 100, 175, 250, 325 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Visage:
-                    Kill(me, me.Spellbook.Spell2, new double[] { 20, 20, 20, 20 }, 1, null, true, false, true);
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 20, 20, 20, 20 }, 1, null, "smart");
                     break;
                 case ClassID.CDOTA_Unit_Hero_Zuus:
+                    Kill(_me, _me.Spellbook.Spell4, new double[] { 225, 350, 475 }, 3, null, "global", true, false, new double[] { 440, 540, 640 });
+                    Kill(_me, _me.Spellbook.Spell2, new double[] { 100, 175, 275, 350 }, 1, null, "complex");
                     break;
             }
         }
 
-        private static void Kill(Hero me, Ability ability, IReadOnlyList<double> damage, uint spellTargetType, uint? range = null, bool lsblock = true, bool piercesSpellImmunity = false, bool smartKill = false, bool complexKill = false, IReadOnlyList<double> adamage = null)
+        private static void Kill(Hero me, Ability ability, IReadOnlyList<double> damage, uint spellTargetType, uint? range = null, string killType = "normal", bool lsblock = true, bool piercesSpellImmunity = false, IReadOnlyList<double> adamage = null)
         {
             var spellLevel = ability.Level - 1;
             if (ability.Level <= 0) return;
+
+            Item refresher = null;
+            var refresh = false;
+            if (killType.Equals("global"))
+            {
+                refresher = _me.FindItem("item_refresher");
+                refresh = refresher != null && refresher.CanBeCasted() &&(_me.Mana > ability.ManaCost*2 + refresher.ManaCost);
+            }
 
             double normalDamage;
             if (adamage == null)
@@ -210,59 +239,72 @@ namespace AIO_KillStealer
 
             var spellDamageType = ability.DamageType;
             var spellRange = range ?? (ability.CastRange + 50);
-            //var spellCastPoint = (float)((ability.GetCastPoint() + Game.Ping) / 1000);
-            const int spellCastPoint = 0;
+            var spellCastPoint = _killError ? 0 : (float)((ability.GetCastPoint() + Game.Ping) / 1000);
 
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
-                double spellDamage;
-                if (complexKill)
+                double spellDamage = 0;
+                if (killType.Equals("complex"))
                     spellDamage = GetComplexDamage(spellLevel, enemy, me, normalDamage);
-                else if (smartKill)
+                else if (killType.Equals("smart"))
                     spellDamage = GetSmartDamage(spellLevel, me, damage);
-                else
+                else if(killType.Equals("normal") || killType.Equals("global"))
                     spellDamage = normalDamage;
 
                 var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, me, piercesSpellImmunity);
-                    
+                if (refresh)
+                    damageDone = damageDone * 2;
+
                 if (me.ClassID == ClassID.CDOTA_Unit_Hero_Axe)
                     damageDone = (float)spellDamage;
 
                 double damageNeeded;
 
-                if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded))
-                {
+                if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded)) {
                     damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
                     HeroDamageDictionary.Add(enemy, damageNeeded);
                     HeroSpellDictionary.Add(enemy, ability.Name);
-                }
-                else
-                {
+                } else {
                     HeroDamageDictionary.Remove(enemy);
                     HeroSpellDictionary.Remove(enemy);
 
                     damageNeeded = enemy.Health - damageDone + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint);
-
+                    
                     HeroDamageDictionary.Add(enemy, damageNeeded);
                     HeroSpellDictionary.Add(enemy, ability.Name);
                 }
                     
-                if (!KillStealEnabled || me.IsChanneling()) continue;
+                if (me.IsChanneling()) continue;
 
-                if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, ability, damageDone)) continue;
-
+                if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange || killType.Equals("global")) || !MeCanSurvive(enemy, me, ability, damageDone)) continue;
+                
                 switch (spellTargetType)
                 {
                     case 1:
                         CastSpell(ability, enemy, me, lsblock);
+                        if (killType.Equals("global") && refresh)
+                        {
+                            refresher.UseAbility();
+                            CastSpell(ability, enemy, me, lsblock);
+                        }
                         break;
                     case 2:
                         CastSpell(ability, enemy.Position, me, lsblock);
+                        if (killType.Equals("global") && refresh)
+                        {
+                            refresher.UseAbility();
+                            CastSpell(ability, enemy.Position, me, lsblock);
+                        }
                         break;
                     case 3:
                         if (!(ability.Cooldown > 0) && ability.CanBeCasted() && me.CanCast())
                             ability.UseAbility();
+                        if (killType.Equals("global") && refresh)
+                        {
+                            refresher.UseAbility();
+                            ability.UseAbility();
+                        }
                         break;
                 }
                 break;
@@ -279,8 +321,7 @@ namespace AIO_KillStealer
             var spellDamage = damage[(int)blinkstrike.Level];
             var backstabDamage = (float)bs[backstab.Level] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
             var spellRange = blinkstrike.CastRange + 50;
-            //var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
-            const int spellCastPoint = 0;
+            var spellCastPoint = _killError ? 0 : (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
@@ -305,7 +346,7 @@ namespace AIO_KillStealer
                     HeroSpellDictionary.Add(enemy, blinkstrike.Name);
                 }
 
-                if (!KillStealEnabled || me.IsChanneling()) continue;
+                if (me.IsChanneling()) continue;
 
                 if (!(damageNeeded < 0) || !(me.Distance2D(enemy) < spellRange) || !MeCanSurvive(enemy, me, blinkstrike, damageBlinkstrike + damageBackstab)) continue;
 
@@ -455,17 +496,17 @@ namespace AIO_KillStealer
             return 0;
         }
 
-        /*
-        private static void KillStealer_OnWndProc(WndEventArgs args)
+        
+        private static void Game_OnWndProc(WndEventArgs args)
         {
-            if (args.Msg != (ulong)Utils.WindowsMessages.WM_KEYUP || args.WParam != 'Z' || Game.IsChatOpen)
+            if (!Game.IsInGame || args.Msg != (ulong)Utils.WindowsMessages.WM_KEYUP || args.WParam != 'D' || Game.IsChatOpen)
                 return;
-            _killstealEnabled = !_killstealEnabled;
+            _activ = !_activ;
         }
-        */
-        private static void KillStealer_OnDraw(EventArgs args)
+        
+        private static void Game_OnDraw(EventArgs args)
         {
-            if (!Game.IsInGame || _player == null)
+            if (!Game.IsInGame || _player == null || _me == null || !_activ)
                 return;
 
             var enemies = ObjectMgr.GetEntities<Hero>().Where(hero => hero.IsVisible && hero.IsAlive && hero.Team != _player.Team && !hero.IsIllusion()).ToList();
@@ -473,23 +514,18 @@ namespace AIO_KillStealer
             {
                 Vector2 screenPos;
                 var enemyPos = enemy.Position + new Vector3(0, 0, enemy.HealthBarOffset);
-
-                if (enemy.HealthBarOffset == -1) continue;
-
                 if (!Drawing.WorldToScreen(enemyPos, out screenPos)) continue;
 
                 var start = screenPos + new Vector2(-51, -40);
                 double damageNeeded;
                 string spell;
+                if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded) || !HeroSpellDictionary.TryGetValue(enemy, out spell)) continue;
 
-                if (HeroDamageDictionary.TryGetValue(enemy, out damageNeeded) && HeroSpellDictionary.TryGetValue(enemy, out spell))
-                {
-                    var text = "D a m a g e  f o r  K S: " + string.Format("{0}",(int) damageNeeded);
-                    var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
-                    var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
-                    Drawing.DrawRect(textPos - new Vector2(15, 0), new Vector2(10, 10), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell + ".vmt"));
-                    Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), damageNeeded < 0 ? Color.Red : Color.White, FontFlags.AntiAlias | FontFlags.DropShadow);
-                }
+                var text = "D a m a g e  f o r  K S: " + string.Format("{0}",(int) damageNeeded);
+                var textSize = Drawing.MeasureText(text, "Arial", new Vector2(10, 150), FontFlags.None);
+                var textPos = start + new Vector2(51 - textSize.X / 2, -textSize.Y / 2 + 2);
+                //Drawing.DrawRect(textPos - new Vector2(15, 0), new Vector2(10, 10), Drawing.GetTexture("materials/NyanUI/spellicons/" + spell + ".vmt"));
+                Drawing.DrawText(text, "Arial", textPos, new Vector2(10, 150), damageNeeded < 0 ? Color.Red : Color.White, FontFlags.AntiAlias | FontFlags.DropShadow);
             }
         }
     }
