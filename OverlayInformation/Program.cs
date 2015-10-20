@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Ensage;
-using Ensage.Common;
 using Ensage.Common.Extensions;
 using SharpDX;
 
@@ -52,11 +51,11 @@ namespace OverlayInformation
 
         private static void Main()
         {
-            Game.OnUpdate += OverlayInformation_OnUpdate;
-            Drawing.OnDraw += OverlayInformation_OnDraw;
+            Game.OnUpdate += Game_OnUpdate;
+            Drawing.OnDraw += Drawing_OnDraw;
         }
 
-        private static void OverlayInformation_OnUpdate(EventArgs args)
+        private static void Game_OnUpdate(EventArgs args)
         {
             if (!_overlayInformationLoaded)
             {
@@ -66,24 +65,22 @@ namespace OverlayInformation
                 _me = ObjectMgr.LocalHero;
 
                 if (_player == null || _me == null) return;
+
                 _overlayInformationLoaded = true;
                 Console.Write("#Overlay Information: Loaded!");
             }
 
-            if (!Game.IsInGame || _me == null)
-            {
-                _overlayInformationLoaded = false;
-                Console.Write("#Overlay Information: UnLoaded!");
-                return;
-            }
+            if (Game.IsInGame && _me != null) return;
+
+            _overlayInformationLoaded = false;
+            Console.Write("#Overlay Information: UnLoaded!");
         }
 
-        private static void OverlayInformation_OnDraw(EventArgs args)
+        private static void Drawing_OnDraw(EventArgs args)
         {
             if (!Game.IsInGame || !_overlayInformationLoaded || _player == null || _me == null) return;
 
-            if (!_isScreenVariablesSet)
-            {
+            if (!_isScreenVariablesSet) {
                 _screenX = Drawing.Width;
                 _screenY = Drawing.Height;
                 SetScreenVariables();
@@ -93,24 +90,10 @@ namespace OverlayInformation
             var con = rate;
             if (rate < 1) rate = 1;
 
-            var players = ObjectMgr.GetEntities<Player>().Where(player => !player.Hero.IsIllusion && player.Team != Team.Observer).ToList();
-            var heroes = ObjectMgr.GetEntities<Hero>().Where(hero => !hero.IsIllusion).ToList();
-            if (!players.Any() || !heroes.Any()) return;
+            var players = ObjectMgr.GetEntities<Player>().Where(player => player != null && player.Team != Team.Observer && player.Hero != null && !player.Hero.IsIllusion).ToList();
+            if (!players.Any()) return;
 
-            /*
-            if (OverlayRune)
-            {
-                //OverlayRune();
-            }
-
-            if (OverlayCourier)
-            {
-                var couriers = ObjectMgr.GetEntities<Courier>().Where(courier => courier.Team == _player.Hero.GetEnemyTeam()).ToList();
-                //OverlayCourier(couriers);
-            }
-            */
-
-            foreach (var enemy in heroes.Where(hero => hero.Team != _me.Team && hero.IsIllusion && hero.IsAlive && hero.IsVisible))
+            foreach (var enemy in players.Where(player => player.Hero.Team != _me.Team && player.Hero.IsIllusion && player.Hero.IsAlive && player.Hero.IsVisible).Select(player => player.Hero).ToList())
             {
                 Vector2 screenPos;
                 var enemyPos = enemy.Position + new Vector3(0, 0, enemy.HealthBarOffset);
@@ -118,43 +101,38 @@ namespace OverlayInformation
 
                 if (OverlaySpells)
                 {
-                    var spells = new Ability[7];
-                    var totalSpells = 1;
-                    try { spells[1] = enemy.Spellbook.Spell1;} catch {/*ignored*/}
-                    try { spells[2] = enemy.Spellbook.Spell2;} catch {/*ignored*/}
-                    try { spells[3] = enemy.Spellbook.Spell3;} catch {/*ignored*/}
-                    try { spells[4] = enemy.Spellbook.Spell4;} catch {/*ignored*/}
-                    try { spells[5] = enemy.Spellbook.Spell5;} catch {/*ignored*/}
-                    try { spells[6] = enemy.Spellbook.Spell6;} catch {/*ignored*/}
-                    for (var i = 1; i < 7; i++)
-                    {
-                        if (spells[i] == null) continue;
-                        totalSpells = totalSpells + 1;
-                    }
-                    for (var index = 1; index < totalSpells; index++)
+                    var spells = new Ability[6];
+                    var spellCount = enemy.Spellbook.Count;
+                    try { spells[0] = enemy.Spellbook.Spell1; } catch { /*ignored*/ }
+                    try { spells[1] = enemy.Spellbook.Spell2; } catch { /*ignored*/ }
+                    try { spells[2] = enemy.Spellbook.Spell3; } catch { /*ignored*/ }
+                    try { spells[3] = enemy.Spellbook.Spell4; } catch { /*ignored*/ }
+                    try { spells[4] = enemy.Spellbook.Spell5; } catch { /*ignored*/ }
+                    try { spells[5] = enemy.Spellbook.Spell6; } catch { /*ignored*/ }
+                    for (var index = 0; index < spellCount; index++)
                     {
                         var cooldown = Math.Ceiling(spells[index].Cooldown);
-                        Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (40 + (10*totalSpells)) * rate, 80 * rate), new Vector2(24 * rate,  6 * rate), new Color(0x00, 0x00, 0x00, 0x90));
+                        Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (40 + (10* spellCount)) * rate, 80 * rate), new Vector2(24 * rate,  6 * rate), new Color(0x00, 0x00, 0x00, 0x90));
 
                         if (spells[index].Level.Equals(0)) continue;
                         for (var level = 1; level <= spells[index].Level; level++)
-                            Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (44 + (10 * totalSpells) - (4 * level)) * rate + 3 * rate, 82 * rate), new Vector2(3 * rate, 3 * rate), new Color(0xFF, 0xFF, 0x00, 0xFF));
+                            Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (44 + (10 * spellCount) - (4 * level)) * rate + 3 * rate, 82 * rate), new Vector2(3 * rate, 3 * rate), new Color(0xFF, 0xFF, 0x00, 0xFF));
 
                         if (cooldown.Equals(0)) continue;
-                        Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (40 + (10 * totalSpells)) * rate, 86 * rate), new Vector2(24 * rate, 16 * rate), new Color(0x00, 0x00, 0x00, 0x75));
+                        Drawing.DrawRect(screenPos + new Vector2(index * 30 * rate - (40 + (10 * spellCount)) * rate, 86 * rate), new Vector2(24 * rate, 16 * rate), new Color(0x00, 0x00, 0x00, 0x75));
                         var shift = 3;
                         if (cooldown > 99) cooldown = 99;
                         if (cooldown < 10) shift = 5;
-                        Drawing.DrawText(string.Format("{0}", (int) cooldown), screenPos + new Vector2(index * 30 * rate - (38 + (10 * totalSpells)) * rate + shift * rate + 2 * rate, 80 * rate + 8 * rate), new Color(0xFF, 0xFF, 0xFF, 0xAA), FontFlags.AntiAlias | FontFlags.DropShadow);
+                        Drawing.DrawText(string.Format("{0}", (int) cooldown), screenPos + new Vector2(index * 30 * rate - (38 + (10 * spellCount)) * rate + shift * rate + 2 * rate, 80 * rate + 8 * rate), new Color(0xFF, 0xFF, 0xFF, 0xAA), FontFlags.AntiAlias | FontFlags.DropShadow);
                         }
                 }
 
                 if (OverlayItems)
                 {
+                    var itemtab = new Dictionary<Hero, float>();
                     //var itemX = con * _manaBarX;
                     //var itemY = _screenY / _testY * _manaBarY;
 
-                    var itemtab = new Dictionary<Hero, float>();
                     itemtab[enemy] = 0;
                     if (enemy.FindItem("item_gem") != null) {
                         itemtab[enemy] = itemtab[enemy] + 20 * rate;
@@ -189,36 +167,35 @@ namespace OverlayInformation
                     for (var i = 0; i < enemy.MaximumMana / 250; i++)
                         Drawing.DrawRect(screenPos + new Vector2(-manaX + manaSizeW / enemy.MaximumMana * 250 * i, -manaY + 1), new Vector2(2, 5), new Color(0x0D, 0x14, 0x53, 0x90));
                 }
-
             }
-
             if (OverlayGlyph)
             {
-                //Game.FindKeyValues()
+                // Glyph code.
             }
+            if (OverlayHeroInformation)
+            {
+                var panelX = (float)(_panelSize * (con));
+                var panelY = (float)(_screenY / _panelHealth);
+                var panelUltimate = (float)_panelUltimate * (con);
 
-            if (OverlayHeroInformation) {
-                var panelX = (float) (_panelSize * (con));
-                var panelY = (float) (_screenY / _panelHealth);
-                var panelUltimate = (float) _panelUltimate * (con);
-
-                foreach (var player in players) {
+                foreach (var player in players)
+                {
                     var hero = player.Hero;
                     if (hero.Equals(_me)) continue;
                     float xx = 0;
                     switch (hero.Team)
                     {
-                        case Team.Radiant: xx = (float) (_screenX/_txxG + 1); break;
-                        case Team.Dire: xx = (float) (_screenX/_txxB + 1); break;
+                        case Team.Radiant: xx = (float)(_screenX / _txxG + 1); break;
+                        case Team.Dire: xx = (float)(_screenX / _txxB + 1); break;
                     }
                     var color = (hero.Team == _player.Team) ? new Color(0x00, 0x80, 0x00, 0xFF) : new Color(0x96, 0x00, 0x18, 0xFF);
-                    var handId = (float) GetId(hero.Player.ID, GetCount(), hero.Team);
+                    var handId = (float)GetId(hero.Player.ID, GetCount(), hero.Team);
 
                     //var heroResources = ObjectMgr.GetEntities<Unit>().First(resource => resource.ClassID == ClassID.CDOTA_PlayerResource);
                     //const string lasthits = "5";
                     //const string denies = "10";
 
-                    var healtPercentage = (float) (hero.IsAlive? (decimal)hero.Health / hero.MaximumHealth:0);
+                    var healtPercentage = (float)(hero.IsAlive ? (decimal)hero.Health / hero.MaximumHealth : 0);
                     Drawing.DrawRect(new Vector2(xx - panelUltimate + panelX * handId, panelY + 2), new Vector2(panelX - 1, 8 * rate), new Color(0x00, 0x00, 0x00, 0xD0));
                     Drawing.DrawRect(new Vector2(xx - panelUltimate + panelX * handId, panelY + 2), new Vector2((panelX - 2) * healtPercentage, 8 * rate), color);
                     Drawing.DrawRect(new Vector2(xx - panelUltimate + panelX * handId, panelY + 1), new Vector2(panelX - 1, 8 * rate + 1), new Color(0x00, 0x00, 0x00, 0xFF), true);
@@ -237,7 +214,7 @@ namespace OverlayInformation
                             shift = 2;
                         else if (ultCoolDown < 10)
                             shift = 7;
-                        Drawing.DrawText(ultCoolDown.ToString(CultureInfo.InvariantCulture), new Vector2(xx + panelX * handId + shift, panelY + 5), new Color(0xFF, 0xFF, 0xFF, 0x99), FontFlags.None);
+                        Drawing.DrawText(ultCoolDown.ToString(CultureInfo.InvariantCulture), new Vector2(xx + panelX * handId + shift, panelY + 2), new Color(0xFF, 0xFF, 0xFF, 0x99), FontFlags.None);
                     }
 
                     if (hero.Team == _player.Team) continue;
@@ -245,13 +222,23 @@ namespace OverlayInformation
                     {
                         case AbilityState.Ready:
                         case AbilityState.NoAbility:
-                            Drawing.DrawRect(new Vector2((float)(xx + panelX * (handId + 0.01)), panelY - 5), new Vector2(14 * rate, 15 * rate), Drawing.GetTexture("materials/vgui/hud/minimap_shield.vmat"));
+                            Drawing.DrawRect(new Vector2((float)(xx + panelX * (handId + 0.01)), panelY + 2), new Vector2(14 * rate, 15 * rate), Drawing.GetTexture("materials/vgui/hud/minimap_shield.vmat"));
                             break;
                         case AbilityState.NotEnoughMana:
-                            Drawing.DrawRect(new Vector2((float)(xx + panelX * (handId + 0.01)), panelY - 5), new Vector2(14 * rate, 15 * rate), Drawing.GetTexture("materials/vgui/hud/mana_drop.vmt"));
+                            Drawing.DrawRect(new Vector2((float)(xx + panelX * (handId + 0.01)), panelY + 2), new Vector2(14 * rate, 15 * rate), Drawing.GetTexture("materials/vgui/hud/mana_drop.vmt"));
                             break;
                     }
                 }
+            }
+
+            if (OverlayRune)
+            {
+                // Code for Runes.!
+            }
+
+            if (OverlayCourier)
+            {
+                //var couriers = ObjectMgr.GetEntities<Courier>().Where(courier => courier.Team == _player.Hero.GetEnemyTeam()).ToList();
             }
         }
 
