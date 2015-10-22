@@ -10,7 +10,7 @@ namespace VenomancerWardControl
     internal class Program
     {
         private static readonly uint[] PlagueWardDamage = { 10, 19, 29, 38 };
-        private static void Main(string[] args)
+        private static void Main()
         {
             Game.OnUpdate += Game_OnUpdate;
         }
@@ -29,7 +29,7 @@ namespace VenomancerWardControl
 
             var enemies = ObjectMgr.GetEntities<Hero>().Where(hero => hero.IsAlive && !hero.IsIllusion && hero.IsVisible && hero.Team == me.GetEnemyTeam()).ToList();
             var creeps = ObjectMgr.GetEntities<Creep>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege) && creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
-            var plaguewards = ObjectMgr.GetEntities<Unit>().Where(plagueward => plagueward.ClassID == ClassID.CDOTA_BaseNPC_Venomancer_PlagueWard && plagueward.IsAlive && plagueward.IsVisible && plagueward.IsSelectable).ToList();
+            var plaguewards = ObjectMgr.GetEntities<Unit>().Where(unit => unit.ClassID == ClassID.CDOTA_BaseNPC_Venomancer_PlagueWard && unit.IsAlive && unit.IsVisible).ToList();
 
             if (!enemies.Any() || !creeps.Any() || !plaguewards.Any() || !(plagueWardLevel > 0))
                 return;
