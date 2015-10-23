@@ -190,10 +190,10 @@ namespace AIO_KillStealer
                     Kill(_me.Spellbook.Spell1, new double[] { 110, 160, 210, 260 }, 1, 750);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tinker:
-                    if (_me.FindSpell("tinker_laser").AbilityState == AbilityState.Ready)
-                        Kill(_me.Spellbook.Spell1, new double[] { 80, 160, 240, 320 }, 1);
-                    else if (_me.FindSpell("tinker_heat_seeking_missile").AbilityState == AbilityState.Ready)
+                    if (CanBeCasted(_me.Spellbook.Spell2))
                         Kill(_me.Spellbook.Spell2, new double[] { 125, 200, 275, 350 }, 3, 2500);
+                    else
+                        Kill(_me.Spellbook.Spell1, new double[] { 80, 160, 240, 320 }, 1);
                     break;
                 case ClassID.CDOTA_Unit_Hero_Tusk:
                     var tuskDamage = (_me.MinimumDamage + _me.BonusDamage) * 3.5;
@@ -209,8 +209,10 @@ namespace AIO_KillStealer
                     Kill(_me.Spellbook.Spell2, new double[] { 20, 20, 20, 20 }, 1, null, "smart");
                     break;
                 case ClassID.CDOTA_Unit_Hero_Zuus:
-                    Kill(_me.Spellbook.Spell4, new double[] { 225, 350, 475 }, 3, null, "global", true, false, new double[] { 440, 540, 640 });
-                    Kill(_me.Spellbook.Spell2, new double[] { 100, 175, 275, 350 }, 1, null, "complex");
+                    if(CanBeCasted(_me.Spellbook.Spell4))
+                        Kill(_me.Spellbook.Spell4, new double[] { 225, 350, 475 }, 3, null, "global", true, false, new double[] { 440, 540, 640 });
+                    else
+                        Kill(_me.Spellbook.Spell2, new double[] { 100, 175, 275, 350 }, 1, null, "complex");
                     break;
             }
         }
