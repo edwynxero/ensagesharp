@@ -13,6 +13,7 @@ namespace AIO_KillStealer
         private static readonly Dictionary<Hero, double> HeroDamageDictionary = new Dictionary<Hero, double>();
         private static readonly Dictionary<Hero, string> HeroSpellDictionary = new Dictionary<Hero, string>();
 
+        private static bool _killError = true;
         private static bool _killStealEnabled;
         private static bool _activ = true;
         
@@ -27,8 +28,7 @@ namespace AIO_KillStealer
 
         private static void Game_OnUpdate(EventArgs args)
         {
-            if (!_killStealEnabled)
-            {
+            if (!_killStealEnabled) {
                 if (!Game.IsInGame) return;
 
                 _player = ObjectMgr.LocalPlayer;
@@ -38,8 +38,7 @@ namespace AIO_KillStealer
 
                 _killStealEnabled = true;
                 Console.Write("#AIO Kill-Stealer: Loaded!");
-            } else if (!Game.IsInGame || _player == null || _me == null)
-            {
+            } else if (!Game.IsInGame || _player == null || _me == null) {
                 _killStealEnabled = false;
                 Console.Write("#AIO Kill-Stealer: UnLoaded!");
                 return;
@@ -49,8 +48,7 @@ namespace AIO_KillStealer
             Utils.Sleep(100, "AIO_KillStealer");
             
             if (_me == null) return;
-            switch (_me.ClassID)
-            {
+            switch (_me.ClassID) {
                 case ClassID.CDOTA_Unit_Hero_Abaddon:
                     Kill(_me.Spellbook.Spell1, new double[] { 100, 150, 200, 250 }, 1);
                     break;
@@ -217,15 +215,14 @@ namespace AIO_KillStealer
             }
         }
 
-        private static void Kill(Ability ability, IReadOnlyList<double> damage, uint spellTargetType, uint? range = null, string abilityType = "normal", bool lsblock = true, bool piercesSpellImmunity = false, IReadOnlyList<double> adamage = null)
+        private static void Kill(Ability ability, IReadOnlyList<double> damage, uint spellTargetType, uint? range = null, string abilityType = "normal", bool lsblock = true, bool throughSpellImmunity = false, IReadOnlyList<double> adamage = null)
         {
             var spellLevel = (int) ability.Level - 1;
             if (ability.Level <= 0) return;
 
             Item refresher = null;
             var refresh = false;
-            if (abilityType.Equals("global"))
-            {
+            if (abilityType.Equals("global")) {
                 refresher = _me.FindItem("item_refresher");
                 if (refresher != null)
                     refresh = CanBeCasted(refresher) && (_me.Mana > ability.ManaCost*2 + refresher.ManaCost);
@@ -237,13 +234,12 @@ namespace AIO_KillStealer
             else
                 normalDamage = _me.AghanimState() ? adamage[spellLevel] : damage[spellLevel];
 
-            var spellDamageType = ability.DamageType;
+            var spellDamageType = (_me.ClassID == ClassID.CDOTA_Unit_Hero_Alchemist) ? DamageType.Physical : ability.DamageType;
             var spellRange = range ?? (ability.CastRange + 50);
-            var spellCastPoint = (float)((ability.GetCastPoint() + Game.Ping) / 1000);
+            var spellCastPoint = (float)(((_killError? 0 : ability.GetCastPoint()) + Game.Ping) / 1000);
 
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == _me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
-            foreach (var enemy in enemies)
-            {
+            foreach (var enemy in enemies) {
                 double spellDamage = 0;
                 if (abilityType.Equals("complex"))
                     spellDamage = GetComplexDamage(spellLevel, enemy, _me, normalDamage);
@@ -251,13 +247,10 @@ namespace AIO_KillStealer
                     spellDamage = GetSmartDamage(spellLevel, _me, damage);
                 else if(abilityType.Equals("normal") || abilityType.Equals("global"))
                     spellDamage = normalDamage;
+                var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, _me, throughSpellImmunity);
 
-                if (!(_me.Distance2D(enemy) < spellRange || abilityType.Equals("global"))) continue;
-
-                var damageDone = enemy.DamageTaken((float)spellDamage, spellDamageType, _me, piercesSpellImmunity);
                 if (refresh)
                     damageDone = damageDone * 2;
-
                 if (_me.ClassID == ClassID.CDOTA_Unit_Hero_Axe)
                     damageDone = (float)spellDamage;
 
@@ -276,24 +269,21 @@ namespace AIO_KillStealer
                     HeroDamageDictionary.Add(enemy, damageNeeded);
                     HeroSpellDictionary.Add(enemy, ability.Name);
                 }
-                if (_me.IsChanneling()) continue;
+                if (_me.IsChanneling()) return;
 
-                if (!(damageNeeded < 0) || !MeCanSurvive(enemy, _me, ability, damageDone)) continue;
+                if (!(damageNeeded < 0) || !(_me.Distance2D(enemy) < spellRange || abilityType.Equals("global")) || !MeCanSurvive(enemy, _me, ability, damageDone)) continue;
 
-                switch (spellTargetType)
-                {
+                switch (spellTargetType) {
                     case 1:
                         CastSpell(ability, enemy, _me, lsblock);
-                        if (abilityType.Equals("global") && refresh)
-                        {
+                        if (abilityType.Equals("global") && refresh) {
                             refresher.UseAbility();
                             CastSpell(ability, enemy, _me, lsblock);
                         }
                         break;
                     case 2:
                         CastSpell(ability, enemy.Position, _me, lsblock);
-                        if (abilityType.Equals("global") && refresh)
-                        {
+                        if (abilityType.Equals("global") && refresh) {
                             refresher.UseAbility();
                             CastSpell(ability, enemy.Position, _me, lsblock);
                         }
@@ -301,8 +291,7 @@ namespace AIO_KillStealer
                     case 3:
                         if (CanBeCasted(ability) && _me.CanCast())
                             ability.UseAbility();
-                        if (abilityType.Equals("global") && refresh)
-                        {
+                        if (abilityType.Equals("global") && refresh) {
                             refresher.UseAbility();
                             ability.UseAbility();
                         }
@@ -316,13 +305,12 @@ namespace AIO_KillStealer
         {
             var bs = new[] { 0.5, 0.75, 1, 1.25 };
             var backstab = me.Spellbook.Spell3;
-
             if (blinkstrike.Level <= 0 || backstab.Level <= 0) return;
 
-            var spellDamage = damage[(int)blinkstrike.Level];
-            var backstabDamage = (float)bs[backstab.Level] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
+            var spellDamage = damage[(int)blinkstrike.Level - 1];
+            var backstabDamage = (float)bs[backstab.Level - 1] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
             var spellRange = blinkstrike.CastRange + 50;
-            var spellCastPoint = (float)(blinkstrike.GetCastPoint() + Game.Ping / 1000);
+            var spellCastPoint = (float)((_killError ? 0 : blinkstrike.GetCastPoint()) + Game.Ping / 1000);
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
@@ -330,14 +318,11 @@ namespace AIO_KillStealer
                 var damageBackstab = Math.Floor(enemy.DamageTaken(backstabDamage, backstab.DamageType, me, true));
                 double damageNeeded;
 
-                if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded))
-                {
+                if (!HeroDamageDictionary.TryGetValue(enemy, out damageNeeded)) {
                     damageNeeded = Math.Floor(enemy.Health - damageBlinkstrike - damageBackstab + spellCastPoint * enemy.HealthRegeneration + MorphMustDie(enemy, spellCastPoint));
                     HeroDamageDictionary.Add(enemy, damageNeeded);
                     HeroSpellDictionary.Add(enemy, blinkstrike.Name);
-                }
-                else
-                {
+                } else {
                     HeroDamageDictionary.Remove(enemy);
                     HeroSpellDictionary.Remove(enemy);
 
@@ -381,8 +366,7 @@ namespace AIO_KillStealer
                 case ClassID.CDOTA_Unit_Hero_Elder_Titan:
                     var pasDmg = new[] { 1.12, 1.19, 1.25, 1.25 };
                     var pas = me.Spellbook.Spell3.Level;
-                    if (pas != 0)
-                    {
+                    if (pas != 0) {
                         if (enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_elder_titan_natural_order") == null)
                             return (pasDmg[pas] * damage);
                         return damage;
@@ -391,8 +375,7 @@ namespace AIO_KillStealer
                 case ClassID.CDOTA_Unit_Hero_Shadow_Demon:
                     var actDmg = new[] { 1, 2, 4, 8, 16 };
                     var poison = enemy.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_shadow_demon_shadow_poison");
-                    if (poison != null)
-                    {
+                    if (poison != null) {
                         var poisonStack = poison.StackCount;
                         if (poisonStack != 0 && poisonStack < 6)
                             return (actDmg[poisonStack]) * damage;
@@ -417,7 +400,7 @@ namespace AIO_KillStealer
 
         private static double GetSmartDamage(int level, Hero me, IReadOnlyList<double> damage)
         {
-            var baseDmg = damage[(int)level];
+            var baseDmg = damage[level];
             switch (me.ClassID)
             {
                 case ClassID.CDOTA_Unit_Hero_Alchemist:
@@ -478,13 +461,13 @@ namespace AIO_KillStealer
 
         private static bool CanBeCasted(Ability ability)
         {
-            return ability != null && ability.Cooldown.Equals(0) && ability.Level > 0;
+            return ability != null && ability.Cooldown.Equals(0) && ability.Level > 0 && _me.Mana > ability.ManaCost;
         }
 
         private static void CastSpell(Ability spell, Vector3 targetPos, Unit me, bool lsblock)
         {
             if (spell.Cooldown > 0) return;
-            if (CanBeCasted(spell) && me.CanCast() || lsblock == false)
+            if (CanBeCasted(spell) && me.CanCast() && !lsblock)
                 spell.UseAbility(targetPos);
         }
 
@@ -492,14 +475,14 @@ namespace AIO_KillStealer
         {
             if (target.ClassID != ClassID.CDOTA_Unit_Hero_Morphling) return 0;
 
-            uint[] hp = { 38, 76, 114, 190 };
-            if (target.Spellbook.Spell3.Level > 0)
-                if (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_morphling_morph_agi") != null && target.Strength > 1)
-                    return value * (0 - hp[target.Spellbook.Spell3.Level] + 1);
-                else if (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_morphling_morph_str") != null && target.Agility > 1)
-                    return value * hp[target.Spellbook.Spell3.Level];
-                else
-                    return 0;
+            var morphLevel = target.Spellbook.Spell3.Level;
+            if (morphLevel <= 0) return 0;
+
+            uint[] morphGain = { 38, 76, 114, 190 };
+            if (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_morphling_morph_agi") != null && target.Strength > 1)
+                return value * (0 - morphGain[morphLevel - 1] + 1);
+            if (target.Modifiers.FirstOrDefault(modifier => modifier.Name == "modifier_morphling_morph_str") != null && target.Agility > 1)
+                return value * morphGain[morphLevel - 1];
             return 0;
         }
 
