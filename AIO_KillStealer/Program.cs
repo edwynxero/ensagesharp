@@ -238,7 +238,7 @@ namespace AIO_KillStealer
 
             var spellDamageType = (_me.ClassID == ClassID.CDOTA_Unit_Hero_Alchemist) ? DamageType.Physical : ability.DamageType;
             var spellRange = range ?? (ability.CastRange + 50);
-            var spellCastPoint = (float)(((_killError? 0 : ability.GetCastPoint()) + Game.Ping) / 1000);
+            var spellCastPoint = (float)(((_killError? 0 : ability.GetCastPoint(ability.Level)) + Game.Ping) / 1000);
 
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == _me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies) {
@@ -312,7 +312,7 @@ namespace AIO_KillStealer
             var spellDamage = damage[(int)blinkstrike.Level - 1];
             var backstabDamage = (float)bs[backstab.Level - 1] * me.TotalAgility + me.MinimumDamage + me.BonusDamage;
             var spellRange = blinkstrike.CastRange + 50;
-            var spellCastPoint = (float)((_killError ? 0 : blinkstrike.GetCastPoint()) + Game.Ping / 1000);
+            var spellCastPoint = (float)((_killError ? 0 : blinkstrike.GetCastPoint(blinkstrike.Level)) + Game.Ping / 1000);
             var enemies = ObjectMgr.GetEntities<Hero>().Where(enemy => enemy.Team == me.GetEnemyTeam() && !enemy.IsIllusion() && enemy.IsVisible && enemy.IsAlive && enemy.Health > 0).ToList();
             foreach (var enemy in enemies)
             {
