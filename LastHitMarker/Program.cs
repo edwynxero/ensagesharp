@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Ensage;
@@ -10,7 +10,11 @@ namespace LastHitMarker
     internal class Program
     {
         private static readonly Dictionary<Unit, string> CreepsDictionary = new Dictionary<Unit, string>();
-        private static void Main(string[] args)
+        private static readonly Dictionary<Unit, Team> CreepsTeamDictionary = new Dictionary<Unit, Team>();
+        private static Hero _me;
+        private static Bool _screenSizeLoaded = false;
+        private static float _screenX;
+        private static void Main()
         {
             Game.OnUpdate += Game_OnUpdate;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -22,13 +26,13 @@ namespace LastHitMarker
                 return;
 
             var player = ObjectMgr.LocalPlayer;
-            var me = player.Hero;
+            _me = player.Hero;
 
-            if (player == null || player.Team == Team.Observer || me == null || me.MinimumDamage > 120)
+            if (player == null || player.Team == Team.Observer || _me == null || _me.MinimumDamage > 120)
                 return;
 
-            var quelling_blade = me.FindItem(" item_quelling_blade ");
-            var damage = (quelling_blade != null) ? (me.MinimumDamage * 1.40 + me.BonusDamage) : (me.MinimumDamage + me.BonusDamage);
+            var quellingBlade = _me.FindItem(" item_quelling_blade ");
+            var damage = (quellingBlade != null) ? (_me.MinimumDamage * 1.40 + _me.BonusDamage) : (_me.MinimumDamage + _me.BonusDamage);
 
             var creeps = ObjectMgr.GetEntities<Unit>().Where(creep => (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane || creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege) && creep.IsSpawned).ToList();
 
@@ -36,23 +40,28 @@ namespace LastHitMarker
                 return;
 
             foreach (var creep in creeps) {
-                string creepType;
-                
                 if (creep.IsAlive && creep.IsVisible) {
-                    if (creep.Health > 0 && creep.Health < damage * (1 - creep.DamageResist) + 1) {
+                    string creepType;
+                    if (creep.Health > 0 && creep.Health < damage*(1 - creep.DamageResist) + 1)
+                    {
                         if (!CreepsDictionary.TryGetValue(creep, out creepType) || creepType != "passive") continue;
                         CreepsDictionary.Remove(creep);
+                        CreepsTeamDictionary.Remove(creep);
                         creepType = "active";
                         CreepsDictionary.Add(creep, creepType);
+                        CreepsTeamDictionary.Add(creep, creep.Team);
                     }
-                    else if (creep.Health < damage + 88) {
+                    else if (creep.Health < damage + 88)
+                    {
                         if (CreepsDictionary.TryGetValue(creep, out creepType)) continue;
                         creepType = "passive";
                         CreepsDictionary.Add(creep, creepType);
                     }
                 }
-                else
+                else {
                     CreepsDictionary.Remove(creep);
+                    CreepsTeamDictionary.Remove(creep);
+                }
             }
         }
 
@@ -70,12 +79,19 @@ namespace LastHitMarker
                 var start = screenPos + new Vector2(-5, -30);
 
                 string creepType;
+                Team creepTeam;
                 if (!CreepsDictionary.TryGetValue(creep, out creepType)) continue;
+                if (!CreepsTeamDictionary.TryGetValue(creep, out creepTeam)) continue;
 
-                var screenX = Drawing.Width / (float)1600 * (float)0.8;
+                if (!_screenSizeLoaded)
+                {
+                    _screenX = Drawing.Width / (float)1600 * (float)0.8;
+                    _screenSizeLoaded = true;
+                }
+                
                 switch (creepType) {
-                    case "active": Drawing.DrawRect(start, new Vector2((float)18 * screenX, (float)18 * screenX), Drawing.GetTexture("materials/vgui/hud/minimap_creep.vmat")); break;
-                    case "passive": Drawing.DrawRect(start, new Vector2((float)18 * screenX, (float)18 * screenX), Drawing.GetTexture("materials/vgui/hud/minimap_glow.vmat")); break;
+                    case "active": Drawing.DrawRect(start, creepTeam == _me.Team ? new Vector2(20 * _screenX, 20 * _screenX) : new Vector2(15*_screenX, 15*_screenX), creepTeam == _me.Team ? Drawing.GetTexture("materials/ensage_ui/other/active_deny.vmat") : Drawing.GetTexture("materials/ensage_ui/other/active_coin.vmat")); break;
+                    case "passive": Drawing.DrawRect(start, creepTeam == _me.Team ? new Vector2(20 * _screenX, 20 * _screenX) : new Vector2(15 * _screenX, 15 * _screenX), creepTeam == _me.Team ? Drawing.GetTexture("materials/ensage_ui/other/passive_deny.vmat") : Drawing.GetTexture("materials/ensage_ui/other/passive_coin.vmat")); break;
                 }
             }
         }
