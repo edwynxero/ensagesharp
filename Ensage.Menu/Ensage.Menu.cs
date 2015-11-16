@@ -43,6 +43,9 @@ namespace Ensage.Menu
         private Font mMenuHeaderFont, mMenuFooterFont;
         private readonly List<EnsageMenuItem> mMenuItems;
         #endregion
+        static EnsageMenu() {
+            Initialize();
+        }
 
         public EnsageMenu()
         {
@@ -71,7 +74,7 @@ namespace Ensage.Menu
             mMenuFooterFont = menuFooterFont;
         }
 
-        public static void Intialize()
+        public static void Initialize()
         {
             if (mMenuIntialized) return;
             mEnsageMenus = new List<EnsageMenu>();
